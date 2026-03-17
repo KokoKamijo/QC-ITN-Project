@@ -1,5 +1,3 @@
-# Fix Issues and Make Improvements: Extended Addendum
-
 ## ส่วนที่ 1: Domain Interface Mapping และ DAFT Integration
 
 ### 1.1 Domain Interface Mapping Specification
