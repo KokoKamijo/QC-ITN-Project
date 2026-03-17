@@ -85,3 +85,71 @@ Neural Network Output → Quantum Control Parameters:
 | DNA Storage | 90% | 95% | 80% | Read latency สูง | ใช้ cache simulation |
 | Classical Backbone | 100% | 100% | 100% | - | - |
 | Semantic Routing (SSR) | 90% | 85% | 80% | Weight tuning ต้องทำเพิ่ม | Design of Experiments |
+
+## 1.2.3 DAFT Validation Report Template
+
+```python
+# DAFT Validation Script Structure (สำหรับ Sprint 3-4)
+
+class DAFTValidator:
+    def __init__(self, architecture_spec):
+        self.spec = architecture_spec
+        self.results = {}
+    
+    def validate_completeness(self, component):
+        """ตรวจสอบว่ามีองค์ประกอบครบถ้วน"""
+        required_elements = ['interface', 'state', 'behavior', 'constraints']
+        return sum([hasattr(component, e) for e in required_elements]) / len(required_elements)
+    
+    def validate_consistency(self, component1, component2):
+        """ตรวจสอบความสอดคล้องระหว่าง component"""
+        # ตรวจสอบว่า output ของ component1 ตรงกับ input ของ component2
+        return self._check_interface_compatibility(component1.output, component2.input)
+    
+    def validate_feasibility(self, component):
+        """ตรวจสอบความเป็นไปได้ทางทฤษฎี"""
+        # ใช้ grounding data จาก Specialist
+        return component.theoretical_limit >= component.required_performance
+    
+    def generate_report(self):
+        """สร้าง DAFT validation report"""
+        return pd.DataFrame(self.results)
+```
+
+### 1.3 Source-Domain Mapping Reference
+## 1.3.1 Literature Grounding
+| Concept                | Source Domain     | Reference                             | Applicability to QC-ITN           |
+| ---------------------- | ----------------- | ------------------------------------- | --------------------------------- |
+| Quantum Entanglement   | Physics           | Aspect et al. (1982), Nobel 2022      | Zero-latency synchronization core |
+| Mycelium Networks      | Biology           | Simard et al. (1997), "Wood Wide Web" | Self-healing, adaptive routing    |
+| DNA Storage            | Molecular Biology | Church et al. (2012), Harvard         | High-density traffic logging      |
+| Neuromorphic Computing | Computer Science  | Mead (1990), Intel Loihi              | Predictive transport protocol     |
+| Semantic Routing       | Networking        | RFC semantic networking concepts      | Spacetime-based addressing        |
+
+## 1.3.2 Domain-to-Component Traceability
+```
+[Physics] Quantum Entanglement
+    └─► Quantum Physical Layer
+        ├─► QTN (Quantum Traffic Nodes)
+        ├─► Entangled Pair Distribution
+        └─► Decoherence Modeling
+
+[Biology] Mycelium Networks
+    └─► Bio-Synaptic Layer
+        ├─► Local Pathfinding
+        ├─► Self-Healing Mechanism
+        └─► Bio-Quantum Bridge
+
+[Neuroscience] Neural Networks
+    └─► Neuro-AI Layer (PTP)
+        ├─► Predictive Models
+        ├─► Learning from Traffic Patterns
+        └─► Anomaly Detection
+
+[Molecular Bio] DNA Storage
+    └─► Storage Layer
+        ├─► Black Box Recording
+        ├─► Audit Trail
+        └─► Historical Analysis
+
+```
