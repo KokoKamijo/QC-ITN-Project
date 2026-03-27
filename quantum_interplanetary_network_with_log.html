@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Interplanetary Traffic Network — New Network Group 1</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #010a1a; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+    #wrap { position: relative; width: 100vw; height: 100vh; background: #010a1a; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    #top-left { position: absolute; top: 16px; left: 18px; }
+    #top-left h2 { color: #b8d8f8; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
+    #top-left p { color: #3a6a9a; font-size: 10px; margin-top: 3px; }
+    #top-left small { color: #2a4a6a; font-size: 9px; margin-top: 1px; display: block; }
+    #stats { position: absolute; top: 16px; right: 16px; background: rgba(1,10,26,0.88); border: 0.5px solid rgba(80,160,255,0.22); border-radius: 9px; padding: 12px 16px; min-width: 155px; }
+    .s-label { font-size: 10px; color: #3a6a9a; text-transform: uppercase; letter-spacing: 0.07em; }
+    .s-val { font-size: 13px; color: #b8d8f8; font-weight: 500; margin-top: 2px; margin-bottom: 10px; }
+    .s-val:last-child { margin-bottom: 0; }
+    #bottom-bar { position: absolute; bottom: 14px; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 18px; }
+    #legend { display: flex; gap: 14px; flex-wrap: wrap; }
+    #legend span { font-size: 10px; color: #3a6a9a; display: flex; align-items: center; gap: 5px; }
+    .ldot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    #btn-row { display: flex; gap: 7px; pointer-events: all; }
+    #btn-row button { background: rgba(1,10,26,0.88); border: 0.5px solid rgba(80,160,255,0.28); color: #6aaad8; font-size: 11px; padding: 6px 13px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+    #btn-row button:hover { background: rgba(20,60,110,0.7); color: #b8d8f8; }
+    #btn-row button.on { background: rgba(10,50,120,0.7); color: #c8e8ff; border-color: rgba(80,160,255,0.55); }
+    #send-row { position: absolute; bottom: 46px; right: 16px; display: flex; gap: 8px; pointer-events: all; }
+    #send-row button { background: rgba(0,200,120,0.14); border: 0.5px solid rgba(0,200,120,0.42); color: #00e896; font-size: 11px; padding: 7px 16px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+    #send-row button:hover { background: rgba(0,200,120,0.26); }
+    #send-row button.on { background: rgba(0,200,120,0.26); border-color: rgba(0,200,120,0.7); }
+    #tooltip { position: absolute; display: none; background: rgba(1,10,26,0.96); border: 0.5px solid rgba(80,160,255,0.38); border-radius: 7px; padding: 9px 13px; pointer-events: none; max-width: 170px; z-index: 10; }
+    .tt-name { font-size: 12px; font-weight: 600; color: #b8d8f8; }
+    .tt-info { font-size: 10px; color: #4a8aba; margin-top: 4px; line-height: 1.6; white-space: pre-line; }
+    #hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: rgba(80,160,255,0.22); font-size: 12px; text-align: center; pointer-events: none; transition: opacity 0.6s; letter-spacing: 0.04em; }
+    #speed-wrap { position: absolute; bottom: 48px; left: 18px; display: flex; align-items: center; gap: 9px; pointer-events: all; }
+    #speed-wrap label { font-size: 10px; color: #3a6a9a; }
+    #speed-wrap input[type=range] { width: 90px; accent-color: #4488cc; }
+    #speed-wrap span { font-size: 10px; color: #6aaad8; min-width: 24px; }
+
+    /* ── LOG PANEL ───────────────────────────────────────────── */
+    #log-panel {
+      position: absolute;
+      bottom: 80px; left: 18px;
+      width: 370px;
+      max-height: 220px;
+      background: rgba(1,8,20,0.92);
+      border: 0.5px solid rgba(80,160,255,0.20);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      pointer-events: all;
+      z-index: 20;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      overflow: hidden;
+    }
+    #log-panel.collapsed { max-height: 32px; }
+    #log-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px;
+      border-bottom: 0.5px solid rgba(80,160,255,0.13);
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    #log-header-left { display: flex; align-items: center; gap: 8px; }
+    #log-title { font-size: 10px; color: #6aaad8; text-transform: uppercase; letter-spacing: 0.1em; }
+    #log-count {
+      font-size: 9px; color: #00e896;
+      background: rgba(0,232,150,0.12);
+      border: 0.5px solid rgba(0,232,150,0.3);
+      border-radius: 9px; padding: 1px 7px;
+    }
+    #log-toggle { font-size: 10px; color: #3a6a9a; transition: transform 0.3s; }
+    #log-panel.collapsed #log-toggle { transform: rotate(180deg); }
+    #log-header-btns { display: flex; gap: 5px; }
+    #log-header-btns button {
+      background: rgba(1,10,26,0.7);
+      border: 0.5px solid rgba(80,160,255,0.22);
+      color: #3a6a9a; font-size: 9px;
+      padding: 2px 8px; border-radius: 4px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    #log-header-btns button:hover { color: #b8d8f8; border-color: rgba(80,160,255,0.5); }
+    #log-body {
+      overflow-y: auto; overflow-x: hidden;
+      flex: 1; padding: 6px 0;
+      scroll-behavior: smooth;
+    }
+    #log-body::-webkit-scrollbar { width: 4px; }
+    #log-body::-webkit-scrollbar-track { background: transparent; }
+    #log-body::-webkit-scrollbar-thumb { background: rgba(80,160,255,0.18); border-radius: 2px; }
+    .log-row {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 3px 12px;
+      font-size: 10px; line-height: 1.5;
+      border-bottom: 0.5px solid rgba(255,255,255,0.03);
+      animation: logFadeIn 0.25s ease;
+    }
+    @keyframes logFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .log-row:hover { background: rgba(80,160,255,0.05); }
+    .log-time { color: #2a5a8a; min-width: 52px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .log-badge {
+      font-size: 8.5px; padding: 1px 6px; border-radius: 4px;
+      flex-shrink: 0; margin-top: 1px; font-weight: 600; letter-spacing: 0.04em;
+    }
+    .badge-send    { background: rgba(0,180,255,0.15); color: #00c8ff; border: 0.5px solid rgba(0,180,255,0.3); }
+    .badge-arrive  { background: rgba(0,232,150,0.15); color: #00e896; border: 0.5px solid rgba(0,232,150,0.3); }
+    .badge-done    { background: rgba(255,107,53,0.15); color: #ff8c5a; border: 0.5px solid rgba(255,107,53,0.3); }
+    .badge-reset   { background: rgba(180,100,255,0.15); color: #cc88ff; border: 0.5px solid rgba(180,100,255,0.3); }
+    .badge-manual  { background: rgba(255,220,60,0.15); color: #ffd840; border: 0.5px solid rgba(255,220,60,0.3); }
+    .badge-auto    { background: rgba(80,160,255,0.15); color: #80b8ff; border: 0.5px solid rgba(80,160,255,0.3); }
+    .log-msg { color: #7aaccc; flex: 1; word-break: break-word; }
+    .log-msg b { color: #b8d8f8; font-weight: 500; }
+    .log-msg .hi-green  { color: #00e896; }
+    .log-msg .hi-orange { color: #ff8c5a; }
+    .log-msg .hi-purple { color: #cc88ff; }
+    .log-msg .hi-yellow { color: #ffd840; }
+    #log-empty {
+      text-align: center; color: #2a4a6a;
+      font-size: 10px; padding: 18px 0;
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div id="top-left">
+      <h2>Quantum Interplanetary Traffic Network</h2>
+      <p>New Network — Group Assignment 1  ·  Drag to orbit  ·  Scroll to zoom</p>
+      <small>673380302-8 Yoko  ·  673380510-1 Eiangey  ·  673380050-9 Pok  ·  673308270-5 Jump  ·  673380517-7 Mark</small>
+    </div>
+
+    <div id="stats">
+      <div class="s-label">Total Sent</div>
+      <div class="s-val" id="s-total">0</div>
+      <div class="s-label">Active Streams</div>
+      <div class="s-val" id="s-streams">0</div>
+      <div class="s-label">Source</div>
+      <div class="s-val" id="s-src">—</div>
+      <div class="s-label">Target</div>
+      <div class="s-val" id="s-tgt">—</div>
+    </div>
+
+    <div id="speed-wrap" style="bottom:14px">
+      <label>Speed</label>
+      <input type="range" id="speed-slider" min="0.2" max="5" step="0.1" value="1">
+      <span id="speed-val">1.0×</span>
+    </div>
+
+    <div id="send-row">
+      <button id="auto-btn" class="on">Auto Broadcast</button>
+    </div>
+
+    <div id="bottom-bar">
+      <div id="legend">
+        <span><span class="ldot" style="background:#FFD340;"></span>Sun</span>
+        <span><span class="ldot" style="background:#64b5f6;"></span>Planet / QTN</span>
+        <span><span class="ldot" style="background:#00e896;"></span>Data dot</span>
+        <span><span class="ldot" style="background:#ff6b35;"></span>Arrival burst</span>
+        <span><span class="ldot" style="background:#aa66ff;"></span>Quantum beam</span>
+      </div>
+      <div id="btn-row">
+        <button id="b-beams" class="on">Beams</button>
+        <button id="b-trails" class="on">Trails</button>
+        <button id="b-reset">Reset</button>
+      </div>
+    </div>
+
+    <div id="tooltip">
+      <div class="tt-name" id="tt-name"></div>
+      <div class="tt-info" id="tt-info"></div>
+    </div>
+    <div id="hint">Click any planet to begin sending data</div>
+
+    <!-- ── LOG PANEL ─────────────────────────────────────────── -->
+    <div id="log-panel">
+      <div id="log-header">
+        <div id="log-header-left">
+          <span id="log-title">🛰 Network Log</span>
+          <span id="log-count">0 events</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div id="log-header-btns">
+            <button id="log-pause-btn">⏸ Pause</button>
+            <button id="log-clear-btn">🗑 Clear</button>
+          </div>
+          <span id="log-toggle">▲</span>
+        </div>
+      </div>
+      <div id="log-body">
+        <div id="log-empty">ยังไม่มี event — รอการส่งข้อมูล…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  const wrap = document.getElementById('wrap');
+  const canvas = document.getElementById('c');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x010a1a, 1);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(52, wrap.clientWidth / wrap.clientHeight, 0.1, 2000);
+  camera.position.set(0, 72, 168);
+  camera.lookAt(0, 0, 0);
+
+  const clock = new THREE.Clock();
+  let simSpeed = 1, showBeams = true, showTrails = true, autoMode = true;
+  let totalSent = 0, selectedSrc = null;
+
+  // --- Stars ---
+  const sG = new THREE.BufferGeometry();
+  const sv = [];
+  for (let i = 0; i < 2800; i++) {
+    const t = Math.random() * Math.PI * 2, p = Math.acos(2 * Math.random() - 1), r = 380 + Math.random() * 380;
+    sv.push(r * Math.sin(p) * Math.cos(t), r * Math.sin(p) * Math.sin(t), r * Math.cos(p));
+  }
+  sG.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3));
+  scene.add(new THREE.Points(sG, new THREE.PointsMaterial({ color: 0x88aadd, size: 0.65, transparent: true, opacity: 0.6 })));
+
+  // --- Sun ---
+  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(8, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffdd44 }));
+  scene.add(sunMesh);
+  const sunHalo = new THREE.Mesh(new THREE.SphereGeometry(10.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.13, side: THREE.BackSide }));
+  scene.add(sunHalo);
+  scene.add(new THREE.PointLight(0xffffff, 2.5, 600));
+  scene.add(new THREE.AmbientLight(0x112244, 0.9));
+
+  // --- Planet Data ---
+  const PLANET_DATA = [
+    { name: 'Mercury', color: 0xb8b8b8, r: 1.8, orbit: 22, spd: 4.7, info: 'QTN-α  ·  Mercury hub\nEntangled pairs: 320\nLatency: 0 ms (quantum)' },
+    { name: 'Venus',   color: 0xf0b860, r: 3.1, orbit: 32, spd: 3.5, info: 'QTN-β  ·  Venus relay\nEntangled pairs: 840\nLatency: 0 ms (quantum)' },
+    { name: 'Earth',   color: 0x3a9ad9, r: 3.9, orbit: 44, spd: 2.9, info: 'QTN-PRIME  ·  Origin node\nUniversal Traffic Brain\nAI nodes: 12,400' },
+    { name: 'Mars',    color: 0xd96040, r: 2.8, orbit: 58, spd: 2.4, info: 'QTN-δ  ·  Mars colony\nAI traffic nodes: 4,200\nLatency: 0 ms (quantum)' },
+    { name: 'Jupiter', color: 0xc8a060, r: 7.2, orbit: 82, spd: 1.3, info: 'QTN-ε  ·  Quantum Repeater\nBandwidth: ∞ (entangled)\nMycelium layer active' },
+    { name: 'Saturn',  color: 0xe8cc80, r: 5.8, orbit: 108, spd: 0.97, info: 'QTN-ζ  ·  DNA Storage node\n1 Exabyte per node\nRing relay array: online' },
+    { name: 'Uranus',  color: 0x70e0e0, r: 4.4, orbit: 132, spd: 0.68, info: 'QTN-η  ·  Mycelium layer\nSelf-healing network\nBio-quantum bridge: active' },
+    { name: 'Neptune', color: 0x3850e0, r: 4.1, orbit: 155, spd: 0.54, info: 'QTN-θ  ·  Edge node\nDeep network terminus\nForward error correction: on' },
+  ];
+
+  const planets = [], angles = [], meshes = [];
+
+  PLANET_DATA.forEach((pd, i) => {
+    // Orbit ring
+    const pts = [];
+    for (let a = 0; a <= Math.PI * 2; a += 0.04) pts.push(new THREE.Vector3(Math.cos(a) * pd.orbit, 0, Math.sin(a) * pd.orbit));
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x0d2a4a, transparent: true, opacity: 0.38 })));
+
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(pd.r, 28, 28), new THREE.MeshPhongMaterial({ color: pd.color, shininess: 55 }));
+    scene.add(mesh);
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(pd.r * 1.4, 24, 24), new THREE.MeshBasicMaterial({ color: pd.color, transparent: true, opacity: 0.07, side: THREE.BackSide }));
+    scene.add(glow);
+
+    if (pd.name === 'Saturn') {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(7.2, 11, 64), new THREE.MeshBasicMaterial({ color: 0xc0a068, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }));
+      ring.rotation.x = Math.PI / 2.3;
+      mesh.add(ring);
+    }
+
+    const beaconRing = new THREE.Mesh(
+      new THREE.RingGeometry(pd.r * 1.15, pd.r * 1.24, 32),
+      new THREE.MeshBasicMaterial({ color: 0x00aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.0 })
+    );
+    beaconRing.rotation.x = Math.PI / 2;
+    mesh.add(beaconRing);
+
+    // QTN beacon dot
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(pd.r * 0.28, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.85 }));
+    beacon.position.set(pd.r * 1.05, pd.r * 1.05, 0);
+    mesh.add(beacon);
+
+    planets.push({ mesh, glow, beaconRing, beaconMat: beaconRing.material, beacon, data: pd });
+    meshes.push(mesh);
+    angles.push(Math.random() * Math.PI * 2);
+  });
+
+  // --- Quantum Beams ---
+  const BEAM_PAIRS = [[2, 3], [0, 2], [1, 2], [3, 4], [4, 5], [5, 6], [6, 7], [2, 4], [1, 3]];
+  const beams = [];
+  BEAM_PAIRS.forEach(([a, b]) => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0x8833ff, transparent: true, opacity: 0.09 });
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    beams.push({ geo, mat, a, b });
+  });
+
+  // --- Dot Streams ---
+  const streams = [];
+  const DOT_COLORS = [0x00e896, 0x00d4ff, 0x88ffcc, 0x00ff88, 0x44ffee, 0x00ffd0];
+
+  function bezierPt(p0, p1, t) {
+    const mid = p0.clone().lerp(p1, 0.5);
+    mid.y += p0.distanceTo(p1) * 0.28;
+    return p0.clone().lerp(mid, t).lerp(mid.clone().lerp(p1, t), t);
+  }
+
+  function makeStream(srcIdx, tgtIdx, count = 14) {
+    const dots = [];
+    for (let i = 0; i < count; i++) {
+      const col = DOT_COLORS[Math.floor(Math.random() * DOT_COLORS.length)];
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 8), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.95 }));
+      scene.add(mesh);
+
+      const trailPts = Array.from({ length: 8 }, () => new THREE.Vector3());
+      const trailGeo = new THREE.BufferGeometry().setFromPoints(trailPts);
+      const trailMat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.0 });
+      const trail = new THREE.Line(trailGeo, trailMat);
+      trail.visible = showTrails;
+      scene.add(trail);
+
+      dots.push({ mesh, trail, trailGeo, trailMat, t: -(i / count) * 1.15, speed: 0.009 + Math.random() * 0.006, history: [] });
+    }
+
+    const burstMesh = new THREE.Mesh(new THREE.SphereGeometry(1.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff6b35, transparent: true, opacity: 0.0 }));
+    scene.add(burstMesh);
+
+    return { srcIdx, tgtIdx, dots, burstMesh, burstMat: burstMesh.material, burstScale: 1, alive: true };
+  }
+
+  function removeStream(s) {
+    s.dots.forEach(d => { scene.remove(d.mesh); scene.remove(d.trail); });
+    scene.remove(s.burstMesh);
+    s.alive = false;
+  }
+
+  // ── LOG ENGINE ──────────────────────────────────────────────────────────
+  const logBody       = document.getElementById('log-body');
+  const logEmpty      = document.getElementById('log-empty');
+  const logCountEl    = document.getElementById('log-count');
+  const logPanel      = document.getElementById('log-panel');
+  const logHeader     = document.getElementById('log-header');
+  let   logEventCount = 0;
+  let   logPaused     = false;
+  let   streamIdCounter = 0;
+
+  function nowStr() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    const ms = String(d.getMilliseconds()).padStart(3,'0');
+    return `${hh}:${mm}:${ss}.${ms}`;
+  }
+
+  function addLog(type, html) {
+    if (logPaused) return;
+    if (logEmpty.parentNode) logEmpty.remove();
+    logEventCount++;
+    logCountEl.textContent = logEventCount + ' events';
+    const BADGES = {
+      send:   ['badge-send',   'SEND'],
+      arrive: ['badge-arrive', 'ARRIVE'],
+      done:   ['badge-done',   'DONE'],
+      reset:  ['badge-reset',  'RESET'],
+      manual: ['badge-manual', 'MANUAL'],
+      auto:   ['badge-auto',   'AUTO'],
+    };
+    const [cls, label] = BADGES[type] || ['badge-auto', type.toUpperCase()];
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    row.innerHTML = `
+      <span class="log-time">${nowStr()}</span>
+      <span class="log-badge ${cls}">${label}</span>
+      <span class="log-msg">${html}</span>`;
+    logBody.appendChild(row);
+    // Auto-scroll only if near bottom
+    if (logBody.scrollHeight - logBody.scrollTop - logBody.clientHeight < 60) {
+      logBody.scrollTop = logBody.scrollHeight;
+    }
+    // Keep max 200 rows
+    const rows = logBody.querySelectorAll('.log-row');
+    if (rows.length > 200) rows[0].remove();
+  }
+
+  // Log panel toggle
+  logHeader.addEventListener('click', e => {
+    if (e.target.closest('#log-header-btns')) return;
+    logPanel.classList.toggle('collapsed');
+  });
+
+  // Pause / Resume
+  document.getElementById('log-pause-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    logPaused = !logPaused;
+    e.target.textContent = logPaused ? '▶ Resume' : '⏸ Pause';
+    e.target.style.color = logPaused ? '#ffd840' : '';
+  });
+
+  // Clear log
+  document.getElementById('log-clear-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    logBody.innerHTML = '';
+    logBody.appendChild(logEmpty);
+    logEventCount = 0;
+    logCountEl.textContent = '0 events';
+  });
+
+  // ── STREAM ID TRACKING ──────────────────────────────────────────────────
+  // We patch makeStream to attach an ID so we can reference it in logs
+  const _origMakeStream = makeStream;  // will be replaced below
+
+  // ── ORIGINAL sendData replaced with log version ─────────────────────────
+  function sendData(srcIdx, tgtIdx) {
+    if (srcIdx === tgtIdx) return;
+    const s = makeStream(srcIdx, tgtIdx, 14);
+    s.id = ++streamIdCounter;
+    s.logged = false;
+    streams.push(s);
+    totalSent++;
+    document.getElementById('s-total').textContent = totalSent.toLocaleString();
+    document.getElementById('s-src').textContent = PLANET_DATA[srcIdx].name;
+    document.getElementById('s-tgt').textContent = PLANET_DATA[tgtIdx].name;
+    document.getElementById('hint').style.opacity = '0';
+
+    const srcP = planets[srcIdx].mesh.position;
+    const tgtP = planets[tgtIdx].mesh.position;
+    const dist  = srcP.distanceTo(tgtP).toFixed(1);
+    addLog('send',
+      `<b>#${String(s.id).padStart(4,'0')}</b> &nbsp;`+
+      `<b>${PLANET_DATA[srcIdx].name}</b> `+
+      `<span class="hi-purple">→</span> `+
+      `<b>${PLANET_DATA[tgtIdx].name}</b> &nbsp;`+
+      `<span class="hi-green">dist ${dist} AU</span> &nbsp; dots 14`);
+  }
+
+  // --- Camera Orbit ---
+  let camTheta = 0.2, camPhi = 0.55, camR = 168, dragging = false, lm = { x: 0, y: 0 };
+  wrap.addEventListener('mousedown', e => { dragging = true; lm = { x: e.clientX, y: e.clientY }; wrap.style.cursor = 'grabbing'; });
+  window.addEventListener('mouseup', () => { dragging = false; wrap.style.cursor = 'grab'; });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    camTheta -= (e.clientX - lm.x) * 0.004;
+    camPhi = Math.max(0.12, Math.min(1.4, camPhi + (e.clientY - lm.y) * 0.003));
+    lm = { x: e.clientX, y: e.clientY };
+  });
+  wrap.addEventListener('wheel', e => { camR = Math.max(55, Math.min(310, camR + e.deltaY * 0.1)); e.preventDefault(); }, { passive: false });
+  wrap.style.cursor = 'grab';
+
+  // --- Raycasting ---
+  const raycaster = new THREE.Raycaster();
+  const mouse2 = new THREE.Vector2();
+  const tooltip = document.getElementById('tooltip');
+
+  wrap.addEventListener('mousemove', e => {
+    if (dragging) { tooltip.style.display = 'none'; return; }
+    const rect = wrap.getBoundingClientRect();
+    mouse2.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse2.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse2, camera);
+    const hits = raycaster.intersectObjects(meshes);
+    if (hits.length) {
+      const idx = meshes.indexOf(hits[0].object);
+      if (idx >= 0) {
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX - wrap.getBoundingClientRect().left + 14) + 'px';
+        tooltip.style.top = (e.clientY - wrap.getBoundingClientRect().top - 60) + 'px';
+        document.getElementById('tt-name').textContent = PLANET_DATA[idx].name;
+        document.getElementById('tt-info').textContent = PLANET_DATA[idx].info;
+        wrap.style.cursor = 'pointer';
+        return;
+      }
+    }
+    tooltip.style.display = 'none';
+    if (!dragging) wrap.style.cursor = 'grab';
+  });
+
+  wrap.addEventListener('click', e => {
+    if (dragging) return;
+    const rect = wrap.getBoundingClientRect();
+    mouse2.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse2.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse2, camera);
+    const hits = raycaster.intersectObjects(meshes);
+    if (!hits.length) return;
+    const idx = meshes.indexOf(hits[0].object);
+    if (idx < 0) return;
+    if (selectedSrc === null) {
+      selectedSrc = idx;
+      planets[idx].beaconMat.opacity = 0.8;
+      document.getElementById('s-src').textContent = PLANET_DATA[idx].name;
+      document.getElementById('s-tgt').textContent = '— click target planet';
+      addLog('manual', `เลือกต้นทาง: <b>${PLANET_DATA[idx].name}</b> — รอเลือกปลายทาง…`);
+    } else if (idx !== selectedSrc) {
+      sendData(selectedSrc, idx);
+      planets[selectedSrc].beaconMat.opacity = 0;
+      selectedSrc = null;
+    } else {
+      planets[selectedSrc].beaconMat.opacity = 0;
+      selectedSrc = null;
+      document.getElementById('s-tgt').textContent = '—';
+    }
+  });
+
+  // --- Controls ---
+  document.getElementById('b-beams').addEventListener('click', function () {
+    showBeams = !showBeams;
+    this.classList.toggle('on', showBeams);
+    beams.forEach(b => { b.mat.opacity = showBeams ? 0.09 : 0; });
+  });
+  document.getElementById('b-trails').addEventListener('click', function () {
+    showTrails = !showTrails;
+    this.classList.toggle('on', showTrails);
+    streams.forEach(s => s.dots.forEach(d => d.trail.visible = showTrails));
+  });
+  document.getElementById('auto-btn').addEventListener('click', function () {
+    autoMode = !autoMode;
+    this.classList.toggle('on', autoMode);
+    this.textContent = autoMode ? 'Auto Broadcast' : 'Manual Only';
+  });
+  document.getElementById('b-reset').addEventListener('click', () => {
+    streams.forEach(s => removeStream(s));
+    streams.length = 0;
+    if (selectedSrc !== null) { planets[selectedSrc].beaconMat.opacity = 0; selectedSrc = null; }
+    camTheta = 0.2; camPhi = 0.55; camR = 168;
+    totalSent = 0;
+    document.getElementById('s-total').textContent = '0';
+    document.getElementById('s-streams').textContent = '0';
+    document.getElementById('s-src').textContent = '—';
+    document.getElementById('s-tgt').textContent = '—';
+    document.getElementById('hint').style.opacity = '1';
+    addLog('reset', '<span class="hi-purple">ระบบ reset — ล้าง stream ทั้งหมด</span>');
+  });
+  document.getElementById('speed-slider').addEventListener('input', e => {
+    simSpeed = parseFloat(e.target.value);
+    document.getElementById('speed-val').textContent = simSpeed.toFixed(1) + '×';
+  });
+
+  // --- Auto Broadcast ---
+  let autoTimer = 0;
+  function maybeAutoSend(delta) {
+    if (!autoMode) return;
+    autoTimer += delta;
+    if (autoTimer > 0.75) {
+      autoTimer = 0;
+      const a = Math.floor(Math.random() * PLANET_DATA.length);
+      let b = Math.floor(Math.random() * PLANET_DATA.length);
+      while (b === a) b = Math.floor(Math.random() * PLANET_DATA.length);
+      if (streams.length < 40) sendData(a, b);
+    }
+  }
+
+  // --- Main Loop ---
+  function animate() {
+    requestAnimationFrame(animate);
+    const rawDelta = Math.min(clock.getDelta(), 0.05);
+    const delta = rawDelta * simSpeed;
+    const now = Date.now();
+
+    // Camera
+    camera.position.x = camR * Math.sin(camPhi) * Math.sin(camTheta);
+    camera.position.y = camR * Math.cos(camPhi);
+    camera.position.z = camR * Math.sin(camPhi) * Math.cos(camTheta);
+    camera.lookAt(0, 0, 0);
+
+    // Planets
+    planets.forEach((p, i) => {
+      angles[i] += delta * p.data.spd * 0.011;
+      const a = angles[i], r = p.data.orbit;
+      p.mesh.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+      p.glow.position.copy(p.mesh.position);
+      p.mesh.rotation.y += delta * 0.25;
+      if (i === selectedSrc) p.beaconMat.opacity = 0.5 + 0.4 * Math.sin(now * 0.006);
+    });
+
+    // Sun
+    const ss = 1 + 0.022 * Math.sin(now * 0.002);
+    sunMesh.scale.setScalar(ss);
+    sunHalo.scale.setScalar(ss);
+
+    // Beams
+    if (showBeams) {
+      beams.forEach(({ geo, mat, a, b }, i) => {
+        const pa = planets[a].mesh.position, pb = planets[b].mesh.position;
+        const pos = geo.attributes.position.array;
+        pos[0] = pa.x; pos[1] = pa.y; pos[2] = pa.z;
+        pos[3] = pb.x; pos[4] = pb.y; pos[5] = pb.z;
+        geo.attributes.position.needsUpdate = true;
+        mat.opacity = 0.05 + 0.08 * Math.abs(Math.sin(now * 0.0017 + i * 0.9));
+      });
+    }
+
+    // Auto send
+    maybeAutoSend(rawDelta);
+
+    // Clean dead streams
+    for (let i = streams.length - 1; i >= 0; i--) {
+      const s = streams[i];
+      if (!s.alive || s.dots.every(d => d.t > 1.25)) {
+        if (s.alive) {
+          // ── LOG: stream complete ──
+          const id    = s.id ? String(s.id).padStart(4,'0') : '????';
+          const sName = PLANET_DATA[s.srcIdx].name;
+          const tName = PLANET_DATA[s.tgtIdx].name;
+          addLog('done',
+            `<b>#${id}</b> &nbsp;`+
+            `<b>${sName}</b> → <b>${tName}</b> &nbsp;`+
+            `<span class="hi-orange">stream complete ✓</span>`);
+          removeStream(s);
+        }
+        streams.splice(i, 1);
+      }
+    }
+    document.getElementById('s-streams').textContent = streams.length;
+
+    // Animate dot streams
+    streams.forEach(s => {
+      if (!s.alive) return;
+      const src = planets[s.srcIdx].mesh.position;
+      const tgt = planets[s.tgtIdx].mesh.position;
+
+      s.dots.forEach(d => {
+        d.t += delta * d.speed * 55;
+        if (d.t < 0 || d.t > 1.1) { d.mesh.visible = false; d.trail.visible = false; return; }
+        d.mesh.visible = true;
+        const pos = bezierPt(src, tgt, Math.min(d.t, 1.0));
+        d.mesh.position.copy(pos);
+
+        d.history.push(pos.clone());
+        if (d.history.length > 10) d.history.shift();
+
+        if (showTrails && d.history.length >= 2) {
+          d.trail.visible = true;
+          const arr = d.trailGeo.attributes.position.array;
+          const fill = Math.min(d.history.length, 8);
+          for (let j = 0; j < fill; j++) {
+            const hp = d.history[d.history.length - 1 - j];
+            arr[j * 3] = hp.x; arr[j * 3 + 1] = hp.y; arr[j * 3 + 2] = hp.z;
+          }
+          for (let j = fill; j < 8; j++) { arr[j * 3] = pos.x; arr[j * 3 + 1] = pos.y; arr[j * 3 + 2] = pos.z; }
+          d.trailGeo.attributes.position.needsUpdate = true;
+          d.trailMat.opacity = Math.max(0, 0.55 - d.t * 0.3);
+        } else {
+          d.trail.visible = false;
+        }
+
+        if (d.t >= 0.97 && d.t <= 1.03) {
+          s.burstMesh.position.copy(tgt);
+          s.burstMat.opacity = 0.8;
+          s.burstScale = 1.0;
+          // ── LOG: first dot arrival triggers ARRIVE event ──
+          if (!s.logged) {
+            s.logged = true;
+            const id   = s.id ? String(s.id).padStart(4,'0') : '????';
+            const sName = PLANET_DATA[s.srcIdx].name;
+            const tName = PLANET_DATA[s.tgtIdx].name;
+            addLog('arrive',
+              `<b>#${id}</b> &nbsp;`+
+              `<b>${sName}</b> `+
+              `<span class="hi-purple">→</span> `+
+              `<span class="hi-green"><b>${tName}</b></span> &nbsp;`+
+              `<span class="hi-orange">⚡ Quantum burst</span>`);
+          }
+        }
+      });
+
+      if (s.burstMat.opacity > 0) {
+        s.burstScale += delta * 18;
+        s.burstMesh.scale.setScalar(s.burstScale);
+        s.burstMat.opacity = Math.max(0, s.burstMat.opacity - delta * 3.5);
+      }
+    });
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  window.addEventListener('resize', () => {
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    camera.aspect = wrap.clientWidth / wrap.clientHeight;
+    camera.updateProjectionMatrix();
+  });
+})();
+</script>
+</body>
+</html>
